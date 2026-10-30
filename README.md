@@ -28,7 +28,9 @@ of 23.7 is shared by three years).
    - Script:   `python convergence_analysis.py`
    - Notebook: open `ec_childbearing_convergence.ipynb` and run all cells.
 
-Outputs (9 figures + `results_all.csv`) are written to `outputs/`. A pre-generated copy of
+Outputs (9 figures, each as a 300-dpi PNG and a vector PDF, plus `results_all.csv`) are written
+to `outputs/`. The figure files carry no titles: as BMC requires, titles and legends are in
+the manuscript, and two-panel figures are labelled a and b. A pre-generated copy of
 `outputs/` is included so you can confirm your run matches. Version 2 outputs were generated
 with Python 3.13, pandas 3.0, NumPy 2.5, Matplotlib 3.11, SciPy 1.18 and openpyxl 3.1;
 `requirements.txt` gives minimum versions.
@@ -48,19 +50,18 @@ layout; the loader auto-detects ONS header rows.
 
 ## What the pipeline produces
 
-- **figA** maternal age distribution (all vs first births), England 2025
-- **figB** mean age at first birth, England & Wales, 1938–2025
-- **figC** uterine cancer (C54–C55) incidence trend, England, 2001–2023 (3-year rolling rates;
+- **figA** (manuscript Fig 3) maternal age distribution (all vs first births), England 2025
+- **figB** (Fig 2) mean age at first birth, England & Wales, 1938–2025
+- **figC** (Fig 1) uterine cancer (C54–C55) incidence trend, England, 2001–2023 (3-year rolling rates;
   the 2012–2014 window has no published rate and is shown as a gap)
-- **figD** endometrial vs non-endometrial composition and stage (TNM 8 / FIGO 2009, including
+- **figD** (Fig 4) endometrial vs non-endometrial composition and stage (TNM 8 / FIGO 2009, including
   stage unknown), 2023
-- **figE** headline overlap: cancer diagnosis age vs first-birth age (shaded area under both
-  curves; lower panel enlarges ages 20–55)
-- **figF** overlap trend 2001–2023 (upper panel) and % of uterine cancers diagnosed under 50
-  (lower panel)
-- **figG** reproductive-age registrations (under 40 / 45 / 50), 2001–2023
-- **figH** forward projection: mean maternal age and % births to women 35+ (two panels), to 2047
-- **figI** forward projection: number of births to women 35+ / 40+, to 2047
+- **figE** (Fig 5) headline overlap: cancer diagnosis age vs first-birth age (shaded area under both
+  curves; panel b enlarges ages 20–55)
+- **figF** (Fig 6) overlap trend 2001–2023 (a) and % of uterine cancers diagnosed under 50 (b)
+- **figG** (Fig 7) reproductive-age registrations (under 40 / 45 / 50), 2001–2023
+- **figH** (Fig 8) forward projection: mean maternal age (a) and % births to women 35+ (b), to 2047
+- **figI** (Fig 9) forward projection: number of births to women 35+ / 40+, to 2047
 - **results_all.csv** every reported statistic
 
 ## Key results (England)

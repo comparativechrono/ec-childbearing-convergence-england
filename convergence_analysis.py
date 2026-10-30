@@ -52,7 +52,8 @@ PROJ_BIRTHS   = DATA_DIR / "2022_SNPP_Births_persons.csv"
 
 plt.rcParams.update({"font.family": "DejaVu Sans",   # bundled with matplotlib: identical figures everywhere
                      "font.size": 11, "axes.spines.top": False, "axes.spines.right": False,
-                     "figure.dpi": 140, "axes.titlesize": 12})
+                     "figure.dpi": 140, "axes.titlesize": 12,
+                     "pdf.fonttype": 42})                     # embed TrueType fonts in the PDF figures
 INK="#1a2e4a"; ACC="#b5651d"; ACC2="#2e7d6b"; GREY="#999"
 results = {}   # collects every reported number
 
@@ -519,6 +520,16 @@ from matplotlib.patches import Rectangle
 thousands = FuncFormatter(lambda v, _: f"{v:,.0f}")
 GREEN_U50, GREEN_U45, GREEN_U40 = "#7cbfac", ACC2, "#0f3d33"   # nested age limits, light to dark
 NAVY_LIGHT = "#7a8fae"
+# Figure titles are not drawn: BMC asks for titles and legends in the manuscript, not in the image.
+# Multi-panel figures carry bold lowercase panel letters instead.
+def panel(ax, letter):
+    ax.set_title(letter, loc="left", fontweight="bold", fontsize=13)
+def save(fig, stem):
+    """Write a closely cropped 300-dpi PNG and a vector PDF (no creation date, so reruns are identical)."""
+    fig.tight_layout()
+    fig.savefig(OUT_DIR/f"{stem}.png", dpi=300, bbox_inches="tight", pad_inches=0.05)
+    fig.savefig(OUT_DIR/f"{stem}.pdf", bbox_inches="tight", pad_inches=0.05, metadata={"CreationDate": None})
+    plt.close(fig)
 
 # Fig A — maternal age distribution, England 2025, by five-year band of mother's age
 fig, ax = plt.subplots(figsize=(7.2,4.4))
@@ -528,8 +539,8 @@ _la, = ax.plot(_pos, [p_all.get(b,0) for b in REPRO_U50], "-o", color=INK, lw=2,
 ax.set_xticks(_pos, ["<20" if b == "15 to 19" else b.replace(" to ", "–") for b in REPRO_U50])
 ax.set_xlabel("Mother's age (years)"); ax.set_ylabel("Proportion of births")
 ax.set_ylim(bottom=-0.015, top=1.32*max(max(p_all.get(b,0) for b in REPRO_U50), max(p_first.get(b,0) for b in REPRO_U50)))  # legend headroom
-ax.set_title("Maternal age distribution, England, 2025"); ax.legend([_la, _lf], [_la.get_label(), _lf.get_label()], frameon=False, loc="upper left")
-fig.tight_layout(); fig.savefig(OUT_DIR/"figA_maternal_age_distribution_2025.png"); plt.close(fig)
+ax.legend([_la, _lf], [_la.get_label(), _lf.get_label()], frameon=False, loc="upper left")
+save(fig, "figA_maternal_age_distribution_2025")
 
 # Fig B — first-birth SMA trend (E&W). The published series is rounded to 0.1 year and its
 # minimum is shared by consecutive years; all are marked and the label gives the run of years.
@@ -543,8 +554,8 @@ _run = f"{_ty[0]}–{str(_ty[-1])[2:]}" if len(_ty) > 1 else f"{_ty[0]}"
 ax.annotate(f"trough {_run}: {_tv:.1f} years", (float(np.mean(_ty)), _tv), textcoords="offset points", xytext=(0, -9),
             ha="center", va="top", fontsize=9, color=INK)
 ax.set_xlabel("Year"); ax.set_ylabel("Standardised mean age of mother (years)")
-ax.set_title("Mean age at first birth, England & Wales, 1938–2025"); ax.legend(frameon=False, loc="upper left")
-fig.tight_layout(); fig.savefig(OUT_DIR/"figB_first_birth_age_trend.png"); plt.close(fig)
+ax.legend(frameon=False, loc="upper left")
+save(fig, "figB_first_birth_age_trend")
 
 # Fig C — uterine incidence ASR trend (NDRS 3-year rolling rates). The 2012–2014 window has no
 # rate in the export, so the line is broken there rather than bridged.
@@ -558,8 +569,7 @@ for _m in _roll.index[_roll.isna()]:
                 ha="center", va="top", fontsize=8, color="#666")
 ax.set_xticks(range(_mids[0], _mids[-1] + 1, 4))
 ax.set_xlabel("Year (midpoint of 3-year rolling window)"); ax.set_ylabel("Age-standardised rate / 100,000 women")
-ax.set_title("Uterine cancer (C54–C55) incidence, England, 2001–2023\n(3-year rolling rates)")
-fig.tight_layout(); fig.savefig(OUT_DIR/"figC_uterine_incidence_trend.png"); plt.close(fig)
+save(fig, "figC_uterine_incidence_trend")
 
 # Fig D — endometrial composition + stage. Shared y-axis, so the stage bars (including the cases
 # with stage missing or unstageable) add up to the endometrial bar.
@@ -567,11 +577,11 @@ _stage_unknown = endo - sum(endo_stage.values())
 assert int(_stage_unknown) == results["2023 endometrial stage missing/unstageable"]
 fig, (a1,a2) = plt.subplots(1,2, figsize=(9,4.2), sharey=True)
 a1.bar(["Endometrial","Non-endometrial"], [endo,nonendo], color=[ACC2,GREY])
-a1.set_title(f"Uterine cancer (C54–C55) by NDRS group, 2023\n(endometrial = {100*endo/all_u:.0f}% of {int(all_u):,})")
-a1.set_xlabel("NDRS group"); a1.set_ylabel("Registrations"); a1.yaxis.set_major_formatter(thousands)
+panel(a1, "a")
+a1.set_xlabel("Uterine cancer (C54–C55):\nNDRS group"); a1.set_ylabel("Registrations"); a1.yaxis.set_major_formatter(thousands)
 a2.bar(["1","2","3","4","Unknown"], [endo_stage[s] for s in ["1","2","3","4"]] + [_stage_unknown], color=[ACC2]*4 + [GREY])
-a2.set_title("Endometrial cancer by stage, 2023"); a2.set_xlabel("Stage at diagnosis (TNM 8 / FIGO 2009)")
-fig.tight_layout(); fig.savefig(OUT_DIR/"figD_endometrial_type_stage_2023.png"); plt.close(fig)
+panel(a2, "b"); a2.set_xlabel("Endometrial cancer: stage at diagnosis\n(TNM 8 / FIGO 2009)")
+save(fig, "figD_endometrial_type_stage_2023")
 
 # Fig E — headline overlap. Each curve joins the band proportions at the exact band midpoints
 # (ages are in completed years, so 15–19 is plotted at 17.5). The births series starts at 15–19,
@@ -594,12 +604,12 @@ for a in (ax, axz):
 _zoom = (20, 55, -0.002, 0.05)                                   # x0, x1, y0, y1 of the lower panel
 ax.set_xlim(10, 95)
 ax.add_patch(Rectangle((_zoom[0], _zoom[2]), _zoom[1] - _zoom[0], _zoom[3] - _zoom[2], fill=False, ls=":", lw=1, ec="#666"))
-ax.set_title("Convergence of childbearing age and uterine cancer diagnosis age, England")
+panel(ax, "a")
 _h, _l = ax.get_legend_handles_labels()
 ax.legend([_h[1], _h[2], _h[0]], [_l[1], _l[2], _l[0]], frameon=False, fontsize=10, loc="upper right")
 axz.set_xlim(_zoom[0], _zoom[1]); axz.set_ylim(_zoom[2], _zoom[3])
-axz.set_title("Ages 20–55 enlarged (dotted box above)", fontsize=10, pad=12)
-fig.align_ylabels(); fig.tight_layout(); fig.savefig(OUT_DIR/"figE_overlap_headline.png"); plt.close(fig)
+panel(axz, "b")                                                  # ages 20–55, the dotted box in panel a
+fig.align_ylabels(); save(fig, "figE_overlap_headline")
 
 # Fig F — overlap trend (upper panel) and % of cancers diagnosed under 50 (lower panel)
 fig, (ax, ax2) = plt.subplots(2, 1, figsize=(7.6, 6.2), sharex=True, gridspec_kw={"height_ratios": [1.4, 1]})
@@ -608,10 +618,10 @@ ax.plot(YEARS, ovl_firstfixed, "-^", color=GREY, lw=1.6, label="Overlap with fir
 _lo = min(min(ovl_all), min(ovl_firstfixed)); _hi = max(max(ovl_all), max(ovl_firstfixed))
 ax.set_ylim(_lo - 0.05*(_hi-_lo), _hi + 0.5*(_hi-_lo))             # headroom for the legend
 ax.set_ylabel("Overlap coefficient"); ax.legend(frameon=False, fontsize=10, loc="upper left")
-ax.set_title("Trend in cancer–childbearing age overlap, England, 2001–2023")
+panel(ax, "a")
 ax2.plot(YEARS, pct_u50, "-o", color=ACC2, lw=2, ms=5)
-ax2.set_xlabel("Diagnosis year"); ax2.set_ylabel("% of uterine cancers\ndiagnosed under 50")
-fig.align_ylabels(); fig.tight_layout(); fig.savefig(OUT_DIR/"figF_overlap_trend.png"); plt.close(fig)
+ax2.set_xlabel("Diagnosis year"); ax2.set_ylabel("% of uterine cancers\ndiagnosed under 50"); panel(ax2, "b")
+fig.align_ylabels(); save(fig, "figF_overlap_trend")
 
 # Fig G — reproductive-age counts (nested age limits: light to dark green)
 fig, ax = plt.subplots(figsize=(7.6,4.4))
@@ -619,18 +629,17 @@ ax.plot(YEARS, cnt_u50, "-o", color=GREEN_U50, lw=2, label="Diagnosed under 50")
 ax.plot(YEARS, cnt_u45, "-s", color=GREEN_U45, lw=2, label="Diagnosed under 45")
 ax.plot(YEARS, cnt_u40, "-^", color=GREEN_U40, lw=2, label="Diagnosed under 40")
 ax.set_ylim(bottom=0); ax.set_xlabel("Diagnosis year"); ax.set_ylabel("Annual registrations (England)")
-ax.set_title("Uterine cancer (C54–C55) in reproductive-age women, England, 2001–2023")
-ax.legend(frameon=False, loc="upper left"); fig.tight_layout(); fig.savefig(OUT_DIR/"figG_reproductive_age_counts.png"); plt.close(fig)
+ax.legend(frameon=False, loc="upper left"); save(fig, "figG_reproductive_age_counts")
 
 # Fig H — projection: mean maternal age (upper panel) and share of births to women 35+ (lower panel)
 fig, (ax, ax2) = plt.subplots(2, 1, figsize=(7.6, 5.8), sharex=True)
 ax.plot(proj_years_int, proj_mage, color=INK, lw=2)
 ax.set_ylabel("Mean age of\nmother (years)")
 ax.yaxis.set_major_locator(MultipleLocator(0.2)); ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.1f}"))
-ax.set_title("Projected continuation of delayed childbearing, England, to 2047\n(ONS 2022-based projections)")
+panel(ax, "a")
 ax2.plot(proj_years_int, [100*s for s in proj_share35], color=INK, lw=2)
-ax2.set_xlabel("Year"); ax2.set_ylabel("% of births to\nwomen aged 35+")
-fig.align_ylabels(); fig.tight_layout(); fig.savefig(OUT_DIR/"figH_projection_demographic.png"); plt.close(fig)
+ax2.set_xlabel("Year"); ax2.set_ylabel("% of births to\nwomen aged 35+"); panel(ax2, "b")
+fig.align_ylabels(); save(fig, "figH_projection_demographic")
 
 # Fig I — projected number of births to women aged 35+ and 40+ (y-axis from zero)
 fig, ax = plt.subplots(figsize=(7.6,4.4))
@@ -638,8 +647,7 @@ ax.plot(proj_years_int, proj_cnt35, "-o", color=INK, lw=2, label="Births to wome
 ax.plot(proj_years_int, proj_cnt40, "-s", color=NAVY_LIGHT, lw=2, label="Births to women aged 40+")
 ax.set_ylim(bottom=0); ax.yaxis.set_major_formatter(thousands)
 ax.set_xlabel("Year"); ax.set_ylabel("Projected annual births (England)")
-ax.set_title("Projected births to women aged 35+ and 40+, England, to 2047\n(ONS 2022-based projections)")
-ax.legend(frameon=False, loc="center left"); fig.tight_layout(); fig.savefig(OUT_DIR/"figI_projection_counts.png"); plt.close(fig)
+ax.legend(frameon=False, loc="center left"); save(fig, "figI_projection_counts")
 
 # %% [markdown]
 # ## 8. Save results table

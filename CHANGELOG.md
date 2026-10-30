@@ -42,7 +42,7 @@ category.
   In v1 the shading joined the band-wise minima at the band midpoints with straight lines;
   between 42 and 47 years, where the two curves cross, that line cut the corner and left part
   of the shared area unshaded. The shading is now the pointwise minimum of the two plotted
-  lines on a fine age grid. A lower panel enlarges ages 20–55, where the distributions meet.
+  lines on a fine age grid. A second panel (b) enlarges ages 20–55, where the distributions meet.
   The coefficient (computed on the five-year bands) is unchanged.
   - Points now sit at the true band midpoints: ages are in completed years, so 15–19 is plotted
     at 17.5, not 17.
@@ -79,6 +79,11 @@ category.
   figA labels the age bands rather than plotting them at nominal midpoints.
 - Figure font pinned to DejaVu Sans (bundled with matplotlib, and the font the v1 figures
   were drawn in) so figures render identically across environments.
+
+- **Submission format.** Following BMC's figure guidelines, the figure files carry no titles
+  (titles and legends belong in the manuscript), and two-panel figures are labelled a and b.
+  Each figure is written as a closely cropped 300-dpi PNG and a vector PDF with embedded
+  fonts; the PDFs carry no creation date, so reruns reproduce them byte for byte.
 
 ### Other
 - Stale file names in the script header corrected.
