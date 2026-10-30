@@ -32,13 +32,37 @@
   previously quoted 31.0, which was the England banded mean) and the 2018 under-40 count
   (157), so that every number quoted in the manuscript appears in `results_all.csv`.
 
-### Presentation
-- Figure labels use "uterine cancer (C54–C55)" for registry data and state the staging system
-  (TNM 8th edition / FIGO 2009) in figD.
-- Figure 6 (figF): y-axis headroom so the legend no longer overlaps the data.
+### Figures (all nine redrawn)
+Apart from the corrected trend series and the added under-40 series (above), the plotted data
+are unchanged.
+
+- **Overlap figure (Fig 5 / figE).** The shading now covers the whole area under both curves.
+  In v1 the shading joined the band-wise minima at the band midpoints with straight lines;
+  between 42 and 47 years, where the two curves cross, that line cut the corner and left part
+  of the shared area unshaded. The shading is now the pointwise minimum of the two plotted
+  lines on a fine age grid. A lower panel enlarges ages 20–55, where the distributions meet.
+  The coefficient (computed on the five-year bands) is unchanged.
+- **Incidence trend (Fig 1 / figC).** The NDRS rolling-rate export has no rate for the
+  2012–2014 window. v1 drew a straight line from 2011–2013 to 2013–2015, and the manuscript,
+  README and methods called the series "gap-free". The line is now broken and the gap is
+  labelled. The x-axis shows whole years (v1 showed 2002.5, 2005.0, …).
+- **No text over data.** Every figure was checked for text (titles, labels, tick labels,
+  legends, annotations) touching data lines, markers, shading, bars, axis lines, other text or
+  the figure edge. Two overlaps in v1 are fixed:
+  - the Fig 2 / figB trough label crossed the x-axis line; it now sits below the point, clear of
+    the curve and the axis;
+  - the Fig 6 / figF legend crossed the dotted under-50 series; y-axis headroom was added.
+
+  Legends now sit in fixed positions with clear space, rather than being placed
+  automatically. The Fig 3 / figA legend moves above the curves.
+- **Two-axis figures (Figs 6 and 8 / figF and figH).** The right-hand axis is drawn and
+  coloured to match its series. The legend lists every series and says which axis it uses;
+  Fig 8 previously had no legend.
+- **Labels.** Registry data are labelled "uterine cancer (C54–C55)". figD states the staging
+  system (TNM 8th edition / FIGO 2009). Count axes have thousands separators (figD, figI).
 - Figure font pinned to DejaVu Sans (bundled with matplotlib, and the font the v1 figures
-  were drawn in) so figures render identically across environments. Figures whose content
-  did not change (A, B, C, H, I) differ from v1 only by sub-pixel layout differences between
-  matplotlib versions.
+  were drawn in) so figures render identically across environments.
+
+### Other
 - Stale file names in the script header corrected.
 - The notebook is regenerated from the script (cell-for-cell identical code).

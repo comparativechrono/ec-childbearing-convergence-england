@@ -10,9 +10,10 @@ age distribution of childbearing in England, 2001–2023, with a forward project
 
 Repository: https://github.com/comparativechrono/ec-childbearing-convergence-england
 
-**Version 2 (October 2026).** Corrects an error in version 1's all-births trend comparator
-and adds trend statistics and sensitivity analyses — see `CHANGELOG.md`. All other v1
-figures and numbers are unchanged.
+**Version 2 (October 2026).** Corrects an error in version 1's all-births trend comparator,
+adds trend statistics and sensitivity analyses, and redraws the figures (no text over data,
+full overlap shading, the 2012–2014 gap in the incidence series shown) — see `CHANGELOG.md`.
+All other v1 numbers are unchanged.
 
 ## How to run
 
@@ -35,7 +36,7 @@ with Python 3.13, pandas 3.0, NumPy 2.5, Matplotlib 3.11, SciPy 1.18 and openpyx
 | file | description | source |
 |---|---|---|
 | `Incidence_National_ICD10_byage_singleyear.csv` | Uterine cancer incidence by ICD-10, sex, 5-year age band, single years, England, 2001–2023 (age-distribution, overlap and trend work; the all-cancer rows supply the female population denominators) | NDRS CancerData dashboard export — https://digital.nhs.uk/ndrs/data/data-outputs/cancerdata |
-| `Incidence_National_ICD10_allages_rolling3yr.csv` | Uterine cancer incidence, all ages, NDRS 3-year rolling age-standardised rates, England, 2001–2023 (incidence-trend figure; gap-free) | NDRS CancerData dashboard export — https://digital.nhs.uk/ndrs/data/data-outputs/cancerdata |
+| `Incidence_National_ICD10_allages_rolling3yr.csv` | Uterine cancer incidence, all ages, NDRS 3-year rolling age-standardised rates, England, 2001–2023 (incidence-trend figure; the export has no rate for the 2012–2014 window) | NDRS CancerData dashboard export — https://digital.nhs.uk/ndrs/data/data-outputs/cancerdata |
 | `Cancer_registrations_2023_machine_readable_files.zip` | NHS cancer registration statistics, England 2023 (Table 1 = endometrial vs non-endometrial × stage) | NHS Digital / NDRS — https://files.digital.nhs.uk/16/5B8561/Cancer_registrations_2023_machine_readable_files.zip |
 | `2025birthregistrations.xlsx` | ONS Births in England and Wales: birth registrations, 2025 edition (Tables 2, 4, 10, 11) | ONS — birthsinenglandandwalesbirthregistrations/2025 |
 | `2022_SNPP_Births_persons.csv` | ONS 2022-based subnational projections, births by age of mother (all babies) | ONS — birthsbyageofmotherz3 (2022 SNPP, migration-category variant) |
@@ -47,9 +48,11 @@ layout; the loader auto-detects ONS header rows.
 
 - **figA** maternal age distribution (all vs first births), England 2025
 - **figB** mean age at first birth, England & Wales, 1938–2025
-- **figC** uterine cancer (C54–C55) incidence trend, England, 2001–2023
+- **figC** uterine cancer (C54–C55) incidence trend, England, 2001–2023 (3-year rolling rates;
+  the 2012–2014 window has no published rate and is shown as a gap)
 - **figD** endometrial vs non-endometrial composition and stage (TNM 8 / FIGO 2009), 2023
-- **figE** headline overlap: cancer diagnosis age vs first-birth age (shaded overlap)
+- **figE** headline overlap: cancer diagnosis age vs first-birth age (shaded area under both
+  curves; lower panel enlarges ages 20–55)
 - **figF** overlap trend 2001–2023 and % of uterine cancers diagnosed under 50
 - **figG** reproductive-age registrations (under 40 / 45 / 50), 2001–2023
 - **figH** forward projection: mean maternal age and % births to women 35+, to 2047
