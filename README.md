@@ -12,8 +12,10 @@ Repository: https://github.com/comparativechrono/ec-childbearing-convergence-eng
 
 **Version 2 (October 2026).** Corrects an error in version 1's all-births trend comparator,
 adds trend statistics and sensitivity analyses, and redraws the figures (no text over data,
-full overlap shading, the 2012–2014 gap in the incidence series shown) — see `CHANGELOG.md`.
-All other v1 numbers are unchanged.
+full overlap shading, the 2012–2014 gap in the incidence series shown, stacked panels instead
+of second y-axes, consistent colours) — see `CHANGELOG.md`. All other v1 numbers are
+unchanged, except that the first-birth trough is reported as 1969–1971 (the published minimum
+of 23.7 is shared by three years).
 
 ## How to run
 
@@ -50,12 +52,14 @@ layout; the loader auto-detects ONS header rows.
 - **figB** mean age at first birth, England & Wales, 1938–2025
 - **figC** uterine cancer (C54–C55) incidence trend, England, 2001–2023 (3-year rolling rates;
   the 2012–2014 window has no published rate and is shown as a gap)
-- **figD** endometrial vs non-endometrial composition and stage (TNM 8 / FIGO 2009), 2023
+- **figD** endometrial vs non-endometrial composition and stage (TNM 8 / FIGO 2009, including
+  stage unknown), 2023
 - **figE** headline overlap: cancer diagnosis age vs first-birth age (shaded area under both
   curves; lower panel enlarges ages 20–55)
-- **figF** overlap trend 2001–2023 and % of uterine cancers diagnosed under 50
+- **figF** overlap trend 2001–2023 (upper panel) and % of uterine cancers diagnosed under 50
+  (lower panel)
 - **figG** reproductive-age registrations (under 40 / 45 / 50), 2001–2023
-- **figH** forward projection: mean maternal age and % births to women 35+, to 2047
+- **figH** forward projection: mean maternal age and % births to women 35+ (two panels), to 2047
 - **figI** forward projection: number of births to women 35+ / 40+, to 2047
 - **results_all.csv** every reported statistic
 
@@ -67,7 +71,7 @@ layout; the loader auto-detects ONS header rows.
   (2023); under 45 from 158 to 397; under 50 from 333 to 696.
 - 96.6% of uterine cancers are in the NDRS endometrial group; 61% of endometrial cancers are
   stage 1 (72% of those with known stage; TNM 8, equivalent to FIGO 2009).
-- Mean age at first birth (England & Wales) rose from a 1969 trough of 23.7 to 29.6 in 2025;
+- Mean age at first birth (England & Wales) rose from a trough of 23.7 in 1969–1971 to 29.6 in 2025;
   the England vs England-&-Wales gap is 0.0 years (validates the E&W longitudinal comparator).
 - Cancer–first-birth overlap coefficient ≈ 0.05 (2023). The all-births overlap rose by 41%
   (0.031 → 0.044) over 2001–2023, all of the net rise after 2016. In practice the coefficient

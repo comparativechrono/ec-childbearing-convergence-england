@@ -34,7 +34,9 @@
 
 ### Figures (all nine redrawn)
 Apart from the corrected trend series and the added under-40 series (above), the plotted data
-are unchanged.
+are unchanged. Colours now mean the same thing in every figure: green for uterine cancer, navy
+for all births, orange for first births, and grey for a secondary series or an unknown
+category.
 
 - **Overlap figure (Fig 5 / figE).** The shading now covers the whole area under both curves.
   In v1 the shading joined the band-wise minima at the band midpoints with straight lines;
@@ -42,6 +44,11 @@ are unchanged.
   of the shared area unshaded. The shading is now the pointwise minimum of the two plotted
   lines on a fine age grid. A lower panel enlarges ages 20–55, where the distributions meet.
   The coefficient (computed on the five-year bands) is unchanged.
+  - Points now sit at the true band midpoints: ages are in completed years, so 15–19 is plotted
+    at 17.5, not 17.
+  - The births curve now starts at the 15–19 band, which holds ONS "Under 20". v1 plotted a zero
+    for under-15 births; ONS publishes no separate group for those ages.
+  - The legend gives the coefficient to three decimals (0.048).
 - **Incidence trend (Fig 1 / figC).** The NDRS rolling-rate export has no rate for the
   2012–2014 window. v1 drew a straight line from 2011–2013 to 2013–2015, and the manuscript,
   README and methods called the series "gap-free". The line is now broken and the gap is
@@ -55,11 +62,21 @@ are unchanged.
 
   Legends now sit in fixed positions with clear space, rather than being placed
   automatically. The Fig 3 / figA legend moves above the curves.
-- **Two-axis figures (Figs 6 and 8 / figF and figH).** The right-hand axis is drawn and
-  coloured to match its series. The legend lists every series and says which axis it uses;
-  Fig 8 previously had no legend.
+- **Second y-axes replaced by stacked panels (Figs 6 and 8 / figF and figH).** On a two-axis
+  chart each series' scale is set independently. How closely the two lines tracked (Fig 6) or
+  where they crossed (Fig 8) was therefore a consequence of the scaling, not a finding. Each
+  quantity now has its own panel on a shared time axis.
+- **Stage (Fig 4 / figD).** v1 omitted the 1,366 endometrial cancers with stage missing (1,338)
+  or unstageable (28). They are now shown as an "Unknown" bar, and the two panels share one
+  y-axis, so the stage bars add up to the endometrial bar.
+- **Trough (Fig 2 / figB).** The published first-birth mean age (one decimal place) is 23.7 in
+  1969, 1970 and 1971. The figure marks all three years, and `results_all.csv` reports
+  "First-birth SMA trough years (E&W)" as 1969-1971; v1 reported only the first year.
+- **Counts (Figs 7 and 9 / figG and figI).** The y-axes start at zero, so the series can be
+  compared by height.
 - **Labels.** Registry data are labelled "uterine cancer (C54–C55)". figD states the staging
   system (TNM 8th edition / FIGO 2009). Count axes have thousands separators (figD, figI).
+  figA labels the age bands rather than plotting them at nominal midpoints.
 - Figure font pinned to DejaVu Sans (bundled with matplotlib, and the font the v1 figures
   were drawn in) so figures render identically across environments.
 
