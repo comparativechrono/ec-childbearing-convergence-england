@@ -11,12 +11,20 @@
 # **Required raw files in `DATA_DIR`:**
 # | file | source |
 # |---|---|
-# | `Incidence_data_National_ICD10.csv` | NDRS CancerData dashboard — incidence by ICD-10, sex, 5-year age band, England, 2001–2023 |
+# | `Incidence_National_ICD10_byage_singleyear.csv` | NDRS CancerData dashboard — incidence by ICD-10, sex, 5-year age band, single years, England, 2001–2023 |
+# | `Incidence_National_ICD10_allages_rolling3yr.csv` | NDRS CancerData dashboard — all-ages 3-year rolling age-standardised rates, England, 2001–2023 |
 # | `Cancer_registrations_2023_machine_readable_files.zip` | NHS Digital / NDRS — cancer registration statistics, England 2023 (Table 1 carries the endometrial vs non-endometrial × stage split) |
 # | `2025birthregistrations.xlsx` | ONS — Births in England and Wales: birth registrations, 2025 edition |
-# | `2022_SNPP_Births_females.csv` | ONS — 2022-based subnational population projections, births by age of mother (females) |
+# | `2022_SNPP_Births_persons.csv` | ONS — 2022-based subnational population projections, births by age of mother (persons) |
 #
 # Run top to bottom. Outputs are written to `OUT_DIR`.
+#
+# **Version 2 (October 2026).** Corrects the all-births trend comparator (ONS Table 10 reports
+# its oldest maternal age group as "40 and over"; v1 expected "40 to 44"/"45 and over" and so
+# silently dropped all births at 40+, which made the trend overlap equal to the share of
+# cancers diagnosed under 40). Adds annual-percentage-change (APC) trend estimates, an
+# under-40 series, a decomposition of the overlap coefficient, projected births at 40+, and a
+# C54-only sensitivity analysis. See CHANGELOG.md.
 
 # %%
 # ============================ CONFIG & IMPORTS ============================
@@ -39,7 +47,8 @@ CANCER_MRF_ZIP = DATA_DIR / "Cancer_registrations_2023_machine_readable_files.zi
 BIRTHS_XLSX   = DATA_DIR / "2025birthregistrations.xlsx"
 PROJ_BIRTHS   = DATA_DIR / "2022_SNPP_Births_persons.csv"
 
-plt.rcParams.update({"font.size": 11, "axes.spines.top": False, "axes.spines.right": False,
+plt.rcParams.update({"font.family": "DejaVu Sans",   # bundled with matplotlib: identical figures everywhere
+                     "font.size": 11, "axes.spines.top": False, "axes.spines.right": False,
                      "figure.dpi": 140, "axes.titlesize": 12})
 INK="#1a2e4a"; ACC="#b5651d"; ACC2="#2e7d6b"; GREY="#999"
 results = {}   # collects every reported number
@@ -63,8 +72,42 @@ CANC_MAP = {'0 (Under 1)':'<15','01 to 04':'<15','05 to 09':'<15','10 to 14':'<1
 for _b in HB[1:]: CANC_MAP[_b] = _b
 BIRTH_MAP = {'Under 20':'15 to 19','20 to 24':'20 to 24','25 to 29':'25 to 29','30 to 34':'30 to 34',
              '35 to 39':'35 to 39','40 to 44':'40 to 44','45 to 49':'45 to 49','50 and over':'50 to 54'}
+# ONS Table 10 (1938–2025 back-series) publishes mothers' ages as Under 20, 20–24, ..., 35–39 and
+# "40 and over". Births at 40+ are placed in the 40–44 band (births at 45+ are <1% of births), so
+# the trend overlap is, if anything, slightly conservative. ('40 to 44'/'45 and over' are kept in
+# case a future edition splits the open-ended group.)
 ASFR_MAP = {'Under 20':'15 to 19','20 to 24':'20 to 24','25 to 29':'25 to 29','30 to 34':'30 to 34',
-            '35 to 39':'35 to 39','40 to 44':'40 to 44','45 and over':'45 to 49'}
+            '35 to 39':'35 to 39','40 and over':'40 to 44','40 to 44':'40 to 44','45 and over':'45 to 49'}
+REPRO_U40 = ['15 to 19','20 to 24','25 to 29','30 to 34','35 to 39']
+
+def poisson_apc(counts, years, population=None):
+    """Annual percentage change (APC) from a log-linear (quasi-)Poisson regression of annual counts
+    on calendar year, with log(population) as offset when supplied (i.e. a trend in rates).
+    95% CI uses the Pearson-based dispersion (floored at 1). Returns (APC, lower, upper)."""
+    y = np.asarray(counts, float); x = np.asarray(years, float)
+    X = np.column_stack([np.ones(len(y)), x - x.mean()])
+    off = np.zeros(len(y)) if population is None else np.log(np.asarray(population, float))
+    b = np.array([np.log(y.mean()) - off.mean(), 0.0])
+    for _ in range(100):                                   # IRLS
+        mu = np.exp(X @ b + off); z = X @ b + (y - mu) / mu
+        XtW = X.T * mu; b_new = np.linalg.solve(XtW @ X, XtW @ z)
+        if np.max(np.abs(b_new - b)) < 1e-12: b = b_new; break
+        b = b_new
+    mu = np.exp(X @ b + off)
+    phi = max(1.0, float(np.sum((y - mu) ** 2 / mu) / (len(y) - 2)))
+    se = float(np.sqrt(np.linalg.inv((X.T * mu) @ X)[1, 1] * phi))
+    pct = lambda v: 100 * (np.exp(v) - 1)
+    return pct(b[1]), pct(b[1] - 1.96 * se), pct(b[1] + 1.96 * se)
+
+def loglinear_apc(values, years):
+    """APC (95% CI) from ordinary least squares of log(rate) on year (for published ASRs)."""
+    from scipy import stats
+    y = np.log(np.asarray(values, float)); x = np.asarray(years, float)
+    X = np.column_stack([np.ones(len(y)), x - x.mean()])
+    b = np.linalg.lstsq(X, y, rcond=None)[0]; r = y - X @ b
+    se = float(np.sqrt((r @ r) / (len(y) - 2) * np.linalg.inv(X.T @ X)[1, 1]))
+    t = stats.t.ppf(0.975, len(y) - 2); pct = lambda v: 100 * (np.exp(v) - 1)
+    return pct(b[1]), pct(b[1] - t * se), pct(b[1] + t * se)
 
 def to_hb(series, mapping):
     """Aggregate a band-indexed COUNT Series onto harmonised bands; return proportions over HB."""
@@ -136,6 +179,27 @@ results["EC ASR 2021-2023 (3-yr rolling)"] = round(float(asr[asr["mid"]==2022]["
 results["EC ASR rolling change 2001-03 -> 2021-23 (%)"] = round(
     100*(asr[asr["mid"]==2022]["Rate"].iloc[0]/asr[asr["mid"]==2002]["Rate"].iloc[0]-1), 1)
 
+# Single-year all-ages age-standardised rates (2012 is blank in the export) — used for the
+# all-ages APC, and the 2018 value for comparison with published UK figures.
+inc["Rate_num"] = pd.to_numeric(inc["Rate"], errors="coerce")
+asr1 = (inc[(inc["ICD10 code"]=="C54-C55") & (inc["Gender"]=="Females") &
+            (inc["Age at diagnosis"]=="All ages") & (inc["Type of rate"]=="Age-standardised")]
+        .drop_duplicates("Year").set_index("Year")["Rate_num"].dropna().sort_index())
+results["EC ASR 2018 (single year)"] = round(float(asr1.loc[2018]), 1)
+
+# Female population by age band and year, recovered from the NDRS all-cancer age-specific
+# rates (population = count x 100,000 / rate; NDRS rates use ONS mid-year estimates). The
+# all-cancer counts are large, so this is precise to <0.05 per 100,000 when checked against
+# the published uterine-cancer rates. 2012 rates are blank in the export, so the 2012
+# population is interpolated geometrically between 2011 and 2013.
+_allc = inc[(inc["ICD10 code"]=="C00-C97 excl. C44") & (inc["Gender"]=="Females") &
+            (inc["Type of rate"]=="Age-specific")].copy()
+_allc["pop"] = _allc["Count"] * 1e5 / _allc["Rate_num"]
+POP = _allc.pivot_table(index="Year", columns="Age at diagnosis", values="pop", aggfunc="first")
+POP = POP.replace([np.inf, -np.inf], np.nan)
+POP.loc[2012] = np.sqrt(POP.loc[2011] * POP.loc[2013])
+POP = POP.sort_index()
+
 # %% [markdown]
 # ## 3. Births: distributions and trends (ONS birth registrations workbook)
 # First-birth proxy = maternities with **zero previous live-born children** (Table 4).
@@ -198,6 +262,7 @@ results["England 2025 first-births % aged 35+"]     = round(100*p_first[['35 to 
 results["England 2025 first-births % aged 30+"]     = round(100*p_first[['30 to 34','35 to 39','40 to 44','45 to 49']].sum(), 1)
 results["First-birth SMA 1975 (E&W)"]               = round(float(sma_first[t11ew["Year"]==1975].iloc[0]), 2)
 results["First-birth SMA 2025 (E&W)"]               = round(float(sma_first[t11ew["Year"]==2025].iloc[0]), 2)
+results["All-births SMA 2025 (E&W)"]                = round(float(sma_all[t11ew["Year"]==2025].iloc[0]), 2)
 results["First-birth SMA trough year (E&W)"]        = int(t11ew.loc[sma_first.idxmin(), "Year"])
 results["First-birth SMA trough value (E&W)"]       = round(float(sma_first.min()), 2)
 results["First-birth SMA England vs E&W gap, 2025 (yrs)"] = round(gap, 3)
@@ -227,6 +292,12 @@ results["2023 % endometrial of all uterine"]      = round(100*endo/all_u, 1)
 results["2023 endometrial stage 1 count"]         = int(endo_stage["1"])
 results["2023 % endometrial stage 1 (of staged)"] = round(100*endo_stage["1"]/endo_staged, 1)
 results["2023 % endometrial stage 1 (of all endo)"]= round(100*endo_stage["1"]/endo, 1)
+# Stage is as registered by NDRS: TNM 8th edition (equivalent to FIGO 2009 for the corpus
+# uteri), the version used for diagnoses up to 31/12/2025.
+results["2023 non-endometrial (registrations)"]   = int(nonendo)
+results["2023 % non-endometrial of all uterine"]  = round(100*nonendo/all_u, 1)
+results["2023 endometrial stage missing/unstageable"] = int(uval("Uterus - endometrial","Missing") +
+                                                          uval("Uterus - endometrial","Unstageable"))
 
 # %% [markdown]
 # ## 5. Overlap: headline, reproductive-age burden, and trend
@@ -246,6 +317,19 @@ results["EC 2023 count age<50"] = int(cnt(raw_2023, REPRO_U50))
 results["EC 2023 % age<45"]     = round(100*cnt(raw_2023, REPRO_U45)/tot23, 1)
 results["EC 2023 % age<50"]     = round(100*cnt(raw_2023, REPRO_U50)/tot23, 1)
 
+# Decomposition of the headline overlap. In each band the overlap takes the smaller of the two
+# percentages. Below 45 the cancer percentage is the smaller; from 45 upwards the birth
+# percentage is. So the coefficient ~= (share of cancers diagnosed 15-44) + (share of births 45+).
+_cl = [b for b in HB if pc_2023[b] <= p_first[b]]          # bands limited by cancer
+_bl = [b for b in HB if p_first[b] < pc_2023[b]]           # bands limited by births
+results["OVL decomposition: cancer-limited bands"] = ", ".join(_cl)
+results["OVL decomposition: cancer share in cancer-limited bands"] = round(float(pc_2023[_cl].sum()), 4)
+results["OVL decomposition: birth share in birth-limited bands"]   = round(float(p_first[_bl].sum()), 4)
+results["Cancer % aged 40-44 (2023)"]       = round(100*float(pc_2023['40 to 44']), 1)
+results["First-birth % aged 40-44 (2025)"]  = round(100*float(p_first['40 to 44']), 1)
+results["Cancer % aged 45-49 (2023)"]       = round(100*float(pc_2023['45 to 49']), 1)
+results["First-birth % aged 45+ (2025)"]    = round(100*float(p_first[['45 to 49','50 to 54']].sum()), 1)
+
 # 90th percentile of first-birth age (banded linear interpolation)
 def band_pctile(p, q):
     edges = {'15 to 19':(15,20),'20 to 24':(20,25),'25 to 29':(25,30),'30 to 34':(30,35),
@@ -262,18 +346,79 @@ def band_pctile(p, q):
 results["First-birth 90th percentile age (England 2025)"] = round(band_pctile(p_first, 0.90), 1)
 
 # Trend 2001-2023
-ovl_all=[]; ovl_firstfixed=[]; pct_u50=[]; cnt_u45=[]; cnt_u50=[]
+ovl_all=[]; ovl_firstfixed=[]; pct_u50=[]; pct_u45=[]; pct_u40=[]; cnt_u40=[]; cnt_u45=[]; cnt_u50=[]; tot_all=[]
 for y in YEARS:
     pcy = cancer_dist(y); rawy = cancer_counts(y); ty = rawy.sum()
     ovl_all.append(OVL(pcy, allbirths_ew(y)))
     ovl_firstfixed.append(OVL(pcy, p_first))
-    pct_u50.append(100*cnt(rawy, REPRO_U50)/ty)
-    cnt_u45.append(cnt(rawy, REPRO_U45)); cnt_u50.append(cnt(rawy, REPRO_U50))
+    pct_u50.append(100*cnt(rawy, REPRO_U50)/ty); pct_u45.append(100*cnt(rawy, REPRO_U45)/ty)
+    pct_u40.append(100*cnt(rawy, REPRO_U40)/ty)
+    cnt_u40.append(cnt(rawy, REPRO_U40)); cnt_u45.append(cnt(rawy, REPRO_U45)); cnt_u50.append(cnt(rawy, REPRO_U50))
+    tot_all.append(float(ty))
 results["OVL(all-births) 2001"] = round(ovl_all[0], 3)
+results["OVL(all-births) 2016"] = round(ovl_all[YEARS.index(2016)], 3)
 results["OVL(all-births) 2023"] = round(ovl_all[-1], 3)
 results["OVL(all-births) change 2001->2023 (%)"] = round(100*(ovl_all[-1]/ovl_all[0]-1), 1)
+results["OVL(first-births 2025 fixed) 2001"] = round(ovl_firstfixed[0], 3)
+results["OVL(first-births 2025 fixed) 2023"] = round(ovl_firstfixed[-1], 3)
+results["EC registrations all ages: 2001"] = int(tot_all[0]); results["EC registrations all ages: 2023"] = int(tot_all[-1])
+results["EC count age<40: 2001"] = int(cnt_u40[0]); results["EC count age<40: 2023"] = int(cnt_u40[-1])
+results["EC count age<40: 2018"] = int(cnt_u40[YEARS.index(2018)])   # for comparison with Ind (2023): ~150 UK cases <40
 results["EC count age<45: 2001"] = int(cnt_u45[0]); results["EC count age<45: 2023"] = int(cnt_u45[-1])
 results["EC count age<50: 2001"] = int(cnt_u50[0]); results["EC count age<50: 2023"] = int(cnt_u50[-1])
+results["EC % age<40: 2001"] = round(pct_u40[0], 1); results["EC % age<40: 2023"] = round(pct_u40[-1], 1)
+results["EC % age<45: 2001"] = round(pct_u45[0], 1); results["EC % age<45: 2023"] = round(pct_u45[-1], 1)
+results["EC % age<50: 2001"] = round(pct_u50[0], 1); results["EC % age<50: 2023"] = round(pct_u50[-1], 1)
+_t10_40 = lambda y: float(t10m[(t10m["Year"]==y) & (t10m["Age group (years)"]=="40 and over")]["nb"].iloc[0])
+_t10_tot = lambda y: float(t10m[(t10m["Year"]==y) & (t10m["Age group (years)"].isin(ASFR_MAP))]["nb"].sum())
+results["E&W % of births to mothers 40+: 2001"] = round(100*_t10_40(2001)/_t10_tot(2001), 1)
+results["E&W % of births to mothers 40+: 2023"] = round(100*_t10_40(2023)/_t10_tot(2023), 1)
+
+# %% [markdown]
+# ### 5b. Pace of change: annual percentage change (APC), 2001–2023
+# Log-linear (quasi-)Poisson regression of annual registrations on calendar year, without an
+# offset (counts) and with log(female population) as offset (age-specific rates for the
+# combined bands). The all-ages comparator is the APC of the published single-year
+# age-standardised rate (log-linear least squares; 2012 is blank in the export).
+
+# %%
+def _band_series(bands):
+    c = pd.Series([cnt(cancer_counts(y), bands) for y in YEARS], index=YEARS)
+    p = POP.loc[YEARS, bands].sum(axis=1)
+    return c, p
+apc_rows = []
+for label, bands, ages in [("age<40", REPRO_U40, "15-39"), ("age<45", REPRO_U45, "15-44"), ("age<50", REPRO_U50, "15-49")]:
+    c, p = _band_series(bands)
+    a_cnt = poisson_apc(c.values, YEARS); a_rate = poisson_apc(c.values, YEARS, p.values)
+    r01, r23 = 1e5*c[2001]/p[2001], 1e5*c[2023]/p[2023]
+    results[f"EC rate {label} per 100,000 women aged {ages}: 2001"] = round(r01, 2)
+    results[f"EC rate {label} per 100,000 women aged {ages}: 2023"] = round(r23, 2)
+    results[f"APC counts {label} (%/yr, 95% CI)"] = f"{a_cnt[0]:.1f} ({a_cnt[1]:.1f} to {a_cnt[2]:.1f})"
+    results[f"APC rate {label} (%/yr, 95% CI)"]   = f"{a_rate[0]:.1f} ({a_rate[1]:.1f} to {a_rate[2]:.1f})"
+    apc_rows.append((label, a_cnt, a_rate))
+a_all = poisson_apc(tot_all, YEARS)
+a_asr = loglinear_apc(asr1.values, asr1.index.values)
+results["APC counts all ages (%/yr, 95% CI)"] = f"{a_all[0]:.1f} ({a_all[1]:.1f} to {a_all[2]:.1f})"
+results["APC age-standardised rate all ages (%/yr, 95% CI)"] = f"{a_asr[0]:.1f} ({a_asr[1]:.1f} to {a_asr[2]:.1f})"
+
+# %% [markdown]
+# ### 5c. Sensitivity: corpus uteri only (ICD-10 C54)
+# C55 ("uterus, part unspecified") is excluded to check that the results are not driven by
+# tumours of unspecified uterine origin.
+
+# %%
+c54_all = inc[(inc["ICD10 code"]=="C54") & (inc["Gender"]=="Females") &
+              (inc["Age at diagnosis"]=="All ages")].drop_duplicates("Year").set_index("Year")["Count"]
+_c5455_all = pd.Series(tot_all, index=YEARS)
+results["C55 % of C54-C55 registrations: 2001"] = round(100*(1 - c54_all.loc[2001]/_c5455_all.loc[2001]), 1)
+results["C55 % of C54-C55 registrations: 2023"] = round(100*(1 - c54_all.loc[2023]/_c5455_all.loc[2023]), 1)
+results["C54 only - OVL vs first-births (2023 vs 2025)"] = round(OVL(cancer_dist(2023, "C54"), p_first), 3)
+_ovl54 = [OVL(cancer_dist(y, "C54"), allbirths_ew(y)) for y in YEARS]
+results["C54 only - OVL(all-births) 2001"] = round(_ovl54[0], 3)
+results["C54 only - OVL(all-births) 2023"] = round(_ovl54[-1], 3)
+for label, bands in [("age<40", REPRO_U40), ("age<45", REPRO_U45), ("age<50", REPRO_U50)]:
+    results[f"C54 only - count {label}: 2001"] = int(cnt(cancer_counts(2001, "C54"), bands))
+    results[f"C54 only - count {label}: 2023"] = int(cnt(cancer_counts(2023, "C54"), bands))
 
 # %% [markdown]
 # ## 6. Forward projection to 2047 (ONS 2022-based subnational birth projections)
@@ -289,6 +434,11 @@ results["EC count age<50: 2001"] = int(cnt_u50[0]); results["EC count age<50: 20
 # the projection through the sensitive, directly interpretable demographic quantities: the
 # mean maternal age and the share/number of births occurring at ages 35+ and 40+, i.e. the
 # growth of the childbearing population entering the EC-risk window.
+#
+# **Projection age range.** The ONS projections allocate all births to mothers aged 15-44 (the
+# single-age figures sum exactly to the all-ages total), so "40+" in the projection means the
+# 40-44 band and no projected births fall at 45+. With the cancer distribution held at 2023,
+# the projected overlap therefore equals the share of cancers diagnosed at 15-44 in every year.
 
 # %%
 proj = pd.read_csv(PROJ_BIRTHS)
@@ -339,6 +489,13 @@ results["Projected % births to age 40+ : 2023"]  = round(100*at(2023, proj_share
 results["Projected % births to age 40+ : 2047"]  = round(100*at(2047, proj_share40), 1)
 results["Projected births to age 35+ : 2023"]    = int(at(2023, proj_cnt35))
 results["Projected births to age 35+ : 2047"]    = int(at(2047, proj_cnt35))
+results["Projected births to age 40+ : 2023"]    = int(at(2023, proj_cnt40))
+results["Projected births to age 40+ : 2047"]    = int(at(2047, proj_cnt40))
+results["Projected births, all ages : 2023"]     = int(proj_year_age('2023').sum())
+results["Projected births, all ages : 2047"]     = int(proj_year_age('2047').sum())
+_all_check = pd.read_csv(PROJ_BIRTHS)
+_all_check = _all_check[_all_check["AREA_CODE"].astype(str).str.startswith("E") & (_all_check["AGE_GROUP"]=="All ages")]
+assert abs(_all_check['2023'].sum() - proj_year_age('2023').sum()) < 1, "single-age births should sum to the all-ages total"
 # Honest rigor note: proportion-normalised overlap is pinned by EC incidence in the
 # reproductive zone, hence nearly flat under birth-side shift alone.
 results["Projected overlap change 2023->2047 (cancer fixed, %)"] = round(100*(at(2047,proj_ovl)/at(2023,proj_ovl)-1), 1)
@@ -377,20 +534,20 @@ fig.tight_layout(); fig.savefig(OUT_DIR/"figC_uterine_incidence_trend.png"); plt
 # Fig D — endometrial composition + stage
 fig, (a1,a2) = plt.subplots(1,2, figsize=(9,4.2))
 a1.bar(["Endometrial","Non-endometrial"], [endo,nonendo], color=[INK,GREY])
-a1.set_title(f"Uterine cancer type, England 2023\n(endometrial = {100*endo/all_u:.0f}% of {int(all_u):,})")
+a1.set_title(f"Uterine cancer (C54–C55) by NDRS group, 2023\n(endometrial = {100*endo/all_u:.0f}% of {int(all_u):,})")
 a1.set_ylabel("Registrations")
 a2.bar(["1","2","3","4"], [endo_stage[s] for s in ["1","2","3","4"]], color=ACC)
-a2.set_title("Endometrial cancer by stage, 2023"); a2.set_xlabel("Stage at diagnosis"); a2.set_ylabel("Registrations")
+a2.set_title("Endometrial cancer by stage, 2023"); a2.set_xlabel("Stage at diagnosis (TNM 8 / FIGO 2009)"); a2.set_ylabel("Registrations")
 fig.tight_layout(); fig.savefig(OUT_DIR/"figD_endometrial_type_stage_2023.png"); plt.close(fig)
 
 # Fig E — headline overlap
 fig, ax = plt.subplots(figsize=(8,4.6))
 x=[MIDHB[b] for b in HB]; yc=[pc_2023.get(b,0) for b in HB]; yb=[p_first.get(b,0) for b in HB]
-ax.plot(x, yc, "-o", color=ACC2, lw=2, label="Endometrial/uterine cancer, age at diagnosis (England 2023)")
+ax.plot(x, yc, "-o", color=ACC2, lw=2, label="Uterine cancer (C54–C55), age at diagnosis (England 2023)")
 ax.plot(x, yb, "-s", color=ACC, lw=2, label="First births, mother's age (England 2025)")
 ax.fill_between(x, np.minimum(yc,yb), color=INK, alpha=0.35, label=f"Overlap (coefficient = {OVL(pc_2023,p_first):.2f})")
 ax.set_xlabel("Age (years)"); ax.set_ylabel("Proportion within distribution"); ax.set_xlim(10,95)
-ax.set_title("Convergence of childbearing age and endometrial cancer diagnosis age, England")
+ax.set_title("Convergence of childbearing age and uterine cancer diagnosis age, England")
 ax.legend(frameon=False, fontsize=8.5)
 fig.tight_layout(); fig.savefig(OUT_DIR/"figE_overlap_headline.png"); plt.close(fig)
 
@@ -401,16 +558,20 @@ ax.plot(YEARS, ovl_firstfixed, "-^", color=GREY, lw=1.6, label="Overlap with fir
 ax.set_xlabel("Diagnosis year"); ax.set_ylabel("Overlap coefficient"); ax.legend(frameon=False, fontsize=8.5)
 ax2=ax.twinx(); ax2.spines["top"].set_visible(False)
 ax2.plot(YEARS, pct_u50, color=ACC, lw=1.6, ls=":")
-ax2.set_ylabel("% of EC diagnosed under age 50", color=ACC); ax2.tick_params(axis="y", colors=ACC)
+ax2.set_ylabel("% of uterine cancers diagnosed under 50", color=ACC); ax2.tick_params(axis="y", colors=ACC)
+_lo = min(min(ovl_all), min(ovl_firstfixed)); _hi = max(max(ovl_all), max(ovl_firstfixed))
+ax.set_ylim(_lo - 0.05*(_hi-_lo), _hi + 0.45*(_hi-_lo))            # headroom for the legend
+ax2.set_ylim(min(pct_u50) - 0.05*(max(pct_u50)-min(pct_u50)), max(pct_u50) + 0.45*(max(pct_u50)-min(pct_u50)))
 ax.set_title("Trend in cancer–childbearing age overlap, England 2001–2023")
 fig.tight_layout(); fig.savefig(OUT_DIR/"figF_overlap_trend.png"); plt.close(fig)
 
 # Fig G — reproductive-age counts
 fig, ax = plt.subplots(figsize=(7.6,4.4))
-ax.plot(YEARS, cnt_u50, "-o", color=ACC2, lw=2, label="EC cases under 50")
-ax.plot(YEARS, cnt_u45, "-s", color=ACC, lw=2, label="EC cases under 45")
-ax.set_xlabel("Diagnosis year"); ax.set_ylabel("Annual EC registrations (England)")
-ax.set_title("Endometrial/uterine cancer in reproductive-age women, England 2001–2023")
+ax.plot(YEARS, cnt_u50, "-o", color=ACC2, lw=2, label="Diagnosed under 50")
+ax.plot(YEARS, cnt_u45, "-s", color=ACC, lw=2, label="Diagnosed under 45")
+ax.plot(YEARS, cnt_u40, "-^", color=INK, lw=2, label="Diagnosed under 40")
+ax.set_xlabel("Diagnosis year"); ax.set_ylabel("Annual registrations (England)")
+ax.set_title("Uterine cancer (C54–C55) in reproductive-age women, England 2001–2023")
 ax.legend(frameon=False); fig.tight_layout(); fig.savefig(OUT_DIR/"figG_reproductive_age_counts.png"); plt.close(fig)
 
 # Fig H — projection: mean maternal age + share of births to women 35+
