@@ -69,7 +69,8 @@ layout; the loader auto-detects ONS header rows.
 - Uterine cancer age-standardised incidence rose ~32% (3-year rolling rates, 2001–03 →
   2021–23; 1.3%/yr on single-year rates), whereas incidence below 45 rose 3.4%/yr (95% CI
   2.7–4.1) and below 40 4.8%/yr (3.8–5.7). Registrations under 40 went from 61 (2001) to 219
-  (2023); under 45 from 158 to 397; under 50 from 333 to 696.
+  (2023); under 45 from 158 to 397; under 50 from 333 to 696 ("under 40/45/50" means ages
+  15–39/15–44/15–49; the six registrations under 15 in 2001–2023 are excluded).
 - 96.6% of uterine cancers are in the NDRS endometrial group; 61% of endometrial cancers are
   stage 1 (72% of those with known stage; TNM 8, equivalent to FIGO 2009).
 - Mean age at first birth (England & Wales) rose from a trough of 23.7 in 1969–1971 to 29.6 in 2025;

@@ -82,6 +82,8 @@ BIRTH_MAP = {'Under 20':'15 to 19','20 to 24':'20 to 24','25 to 29':'25 to 29','
 # case a future edition splits the open-ended group.)
 ASFR_MAP = {'Under 20':'15 to 19','20 to 24':'20 to 24','25 to 29':'25 to 29','30 to 34':'30 to 34',
             '35 to 39':'35 to 39','40 and over':'40 to 44','40 to 44':'40 to 44','45 and over':'45 to 49'}
+# "Under 40/45/50" means ages 15–39, 15–44 and 15–49 at diagnosis: registrations under 15
+# (two in each of 2001, 2016 and 2023, none in other years) are excluded.
 REPRO_U40 = ['15 to 19','20 to 24','25 to 29','30 to 34','35 to 39']
 
 def poisson_apc(counts, years, population=None):
@@ -263,8 +265,8 @@ results["England 2025 all-births total"]            = int(allb[allb.index.isin(B
 results["England 2025 all-births banded mean age"]  = round(banded_mean(p_all), 2)
 results["England 2025 first-births total (proxy)"]  = int(firstb[firstb.index.isin(BIRTH_MAP)].sum())
 results["England 2025 first-births banded mean age"]= round(banded_mean(p_first), 2)
-results["England 2025 first-births % aged 35+"]     = round(100*p_first[['35 to 39','40 to 44','45 to 49']].sum(), 1)
-results["England 2025 first-births % aged 30+"]     = round(100*p_first[['30 to 34','35 to 39','40 to 44','45 to 49']].sum(), 1)
+results["England 2025 first-births % aged 35+"]     = round(100*p_first[['35 to 39','40 to 44','45 to 49','50 to 54']].sum(), 1)
+results["England 2025 first-births % aged 30+"]     = round(100*p_first[['30 to 34','35 to 39','40 to 44','45 to 49','50 to 54']].sum(), 1)
 results["First-birth SMA 1975 (E&W)"]               = round(float(sma_first[t11ew["Year"]==1975].iloc[0]), 2)
 results["First-birth SMA 2025 (E&W)"]               = round(float(sma_first[t11ew["Year"]==2025].iloc[0]), 2)
 results["All-births SMA 2025 (E&W)"]                = round(float(sma_all[t11ew["Year"]==2025].iloc[0]), 2)
@@ -597,7 +599,7 @@ _yb = np.array([p_first.get(b,0) for b in HB[1:]], float)
 _xd = np.linspace(_xc.min(), _xc.max(), 4001)
 _shared = np.minimum(np.interp(_xd, _xc, _yc), np.interp(_xd, _xb, _yb, left=0.0, right=0.0))
 for a in (ax, axz):
-    a.fill_between(_xd, _shared, color=INK, alpha=0.35, lw=0, label=f"Shared area (overlap coefficient = {OVL(pc_2023,p_first):.3f})")
+    a.fill_between(_xd, _shared, color=INK, alpha=0.35, lw=0, label="Shared area (under both curves)")
     a.plot(_xc, _yc, "-o", color=ACC2, lw=2, label="Uterine cancer (C54–C55), age at diagnosis (England 2023)")
     a.plot(_xb, _yb, "-s", color=ACC, lw=2, label="First births, mother's age (England 2025)")
     a.set_xlabel("Age (years)"); a.set_ylabel("Proportion within distribution"); a.tick_params(axis="y", pad=5)
@@ -613,7 +615,7 @@ fig.align_ylabels(); save(fig, "figE_overlap_headline")
 
 # Fig F — overlap trend (upper panel) and % of cancers diagnosed under 50 (lower panel)
 fig, (ax, ax2) = plt.subplots(2, 1, figsize=(7.6, 6.2), sharex=True, gridspec_kw={"height_ratios": [1.4, 1]})
-ax.plot(YEARS, ovl_all, "-o", color=INK, lw=2, label="Overlap with all births (E&W, each year)")
+ax.plot(YEARS, ovl_all, "-o", color=INK, lw=2, label="Overlap with all births (England and Wales, each year)")
 ax.plot(YEARS, ovl_firstfixed, "-^", color=GREY, lw=1.6, label="Overlap with first births (England 2025, held fixed)")
 _lo = min(min(ovl_all), min(ovl_firstfixed)); _hi = max(max(ovl_all), max(ovl_firstfixed))
 ax.set_ylim(_lo - 0.05*(_hi-_lo), _hi + 0.5*(_hi-_lo))             # headroom for the legend

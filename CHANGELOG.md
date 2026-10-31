@@ -14,6 +14,13 @@
     tables, which do separate 40–44 and 45+) was not affected.
   - Births at 40+ are now placed in the 40–44 band. Births at 45+ are <1% of births, so the
     corrected trend is, if anything, slightly conservative.
+- **First-birth shares at 30+ and 35+ (England 2025).** v1 left the births at 50 and over out of
+  the numerator but kept them in the denominator. Corrected: 51.6% (v1 51.5%) and 18.1% (v1
+  18.0%).
+- **Definitions stated.** "Under 40/45/50" has always meant ages 15–39/15–44/15–49 (the six
+  registrations under 15, two in each of 2001, 2016 and 2023, are excluded); this is now said
+  in the code, methods and README. methods.md now names the projection variant (migration
+  category); "persons" refers to births of both sexes, not to the variant.
 
 ### Additions
 - Annual percentage change (APC) in registrations and in age-specific rates below 40, 45 and
@@ -48,7 +55,8 @@ category.
     at 17.5, not 17.
   - The births curve now starts at the 15–19 band, which holds ONS "Under 20". v1 plotted a zero
     for under-15 births; ONS publishes no separate group for those ages.
-  - The legend gives the coefficient to three decimals (0.048).
+  - The key labels the shading "Shared area (under both curves)". The shaded area is an
+    illustration; the coefficient (0.048) is the band sum and is given in the caption.
 - **Incidence trend (Fig 1 / figC).** The NDRS rolling-rate export has no rate for the
   2012–2014 window. v1 drew a straight line from 2011–2013 to 2013–2015, and the manuscript,
   README and methods called the series "gap-free". The line is now broken and the gap is
@@ -75,8 +83,9 @@ category.
 - **Counts (Figs 7 and 9 / figG and figI).** The y-axes start at zero, so the series can be
   compared by height.
 - **Labels.** Registry data are labelled "uterine cancer (C54–C55)". figD states the staging
-  system (TNM 8th edition / FIGO 2009). Count axes have thousands separators (figD, figI).
-  figA labels the age bands rather than plotting them at nominal midpoints.
+  system (TNM 8th edition / FIGO 2009). The figF key spells out England and Wales. Count axes
+  have thousands separators (figD, figI). figA labels the age bands rather than plotting them
+  at nominal midpoints.
 - Figure font pinned to DejaVu Sans (bundled with matplotlib, and the font the v1 figures
   were drawn in) so figures render identically across environments.
 
